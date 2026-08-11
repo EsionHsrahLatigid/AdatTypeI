@@ -42,17 +42,18 @@ AdatTypeI_VST3AudioProcessor::createParameterLayout()
 void AdatTypeI_VST3AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     const int maxCh = 8;
+    maxHostBlockSamples = std::max (1, samplesPerBlock);
 
-    inPadded8.setSize (maxCh, samplesPerBlock, false, true, true);
+    inPadded8.setSize (maxCh, maxHostBlockSamples, false, true, true);
     inPadded8.clear();
 
     // host -> 48k (ceil + margin)
-    const int max48 = (int) std::ceil ((double)samplesPerBlock * (48000.0 / sampleRate)) + 64;
+    const int max48 = (int) std::ceil ((double)maxHostBlockSamples * (48000.0 / sampleRate)) + 64;
     work48.setSize (maxCh, max48, false, true, true);
     out48.setSize  (maxCh, max48, false, true, true);
-    outHost8.setSize (maxCh, samplesPerBlock, false, true, true);
+    outHost8.setSize (maxCh, maxHostBlockSamples, false, true, true);
 
-    to48k.prepare   (maxCh, sampleRate, 48000.0, samplesPerBlock);
+    to48k.prepare   (maxCh, sampleRate, 48000.0, maxHostBlockSamples);
     from48k.prepare (maxCh, 48000.0, sampleRate, max48);
 
     to48k.reset();
@@ -128,25 +129,28 @@ void AdatTypeI_VST3AudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     const int hostN  = buffer.getNumSamples();
     const double hostSR = getSampleRate();
 
+    if (hostN <= 0)
+        return;
+
+    const int processHostN = std::min (hostN, maxHostBlockSamples);
+
     // 1) 入力を8chに整形（不足ch=0埋め）
-    inPadded8.clear();
+    inPadded8.clear (0, processHostN);
     for (int c = 0; c < std::min (hostCh, 8); ++c)
-        inPadded8.copyFrom (c, 0, buffer, c, 0, hostN);
+        inPadded8.copyFrom (c, 0, buffer, c, 0, processHostN);
 
     // 2) host -> 48k
-    to48k.pushInput (inPadded8, hostN);
+    to48k.pushInput (inPadded8, processHostN);
 
-    const double exact48 = (double) hostN * (48000.0 / hostSR) + to48Remainder;
+    const double exact48 = (double) processHostN * (48000.0 / hostSR) + to48Remainder;
     const int n48 = (int) std::floor (exact48);
     to48Remainder = exact48 - (double) n48;
 
     // 念のため最低1、最大は確保バッファ内に丸める
     const int n48Safe = std::clamp (n48, 1, work48.getNumSamples());
 
-    work48.setSize (8, n48Safe, false, false, true);
-    out48.setSize  (8, n48Safe, false, false, true);
-    work48.clear();
-    out48.clear();
+    work48.clear (0, n48Safe);
+    out48.clear (0, n48Safe);
 
     to48k.popOutput (work48, n48Safe);
 
@@ -156,15 +160,17 @@ void AdatTypeI_VST3AudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     // 4) 48k -> host
     from48k.pushInput (out48, n48Safe);
 
-    outHost8.setSize (8, hostN, false, false, true);
-    outHost8.clear();
-    from48k.popOutput (outHost8, hostN);
+    outHost8.clear (0, processHostN);
+    from48k.popOutput (outHost8, processHostN);
 
     // 5) 出力（ホストch数分のみ）
     for (int c = 0; c < hostCh; ++c)
     {
-        if (c < 8) buffer.copyFrom (c, 0, outHost8, c, 0, hostN);
-        else       buffer.clear (c, 0, hostN);
+        if (c < 8) buffer.copyFrom (c, 0, outHost8, c, 0, processHostN);
+        else       buffer.clear (c, 0, processHostN);
+
+        if (processHostN < hostN)
+            buffer.clear (c, processHostN, hostN - processHostN);
     }
 }
 
@@ -181,4 +187,3 @@ void AdatTypeI_VST3AudioProcessor::setStateInformation (const void* data, int si
     if (xmlState && xmlState->hasTagName (apvts.state.getType()))
         apvts.replaceState (juce::ValueTree::fromXml (*xmlState));
 }
-

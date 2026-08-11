@@ -25,7 +25,7 @@ public:
         interpolators.resize ((size_t) ch);
         for (auto& it : interpolators) it.reset();
 
-        tempIn.clear();
+        tempIn.resize ((size_t) fifoCap);
     }
 
     void reset()
@@ -83,21 +83,29 @@ public:
             }
 
             const int wantOut = outSamples - produced;
-            const int maxInNeeded = (int) std::ceil (wantOut * ratio) + minInGuard;
-
-            // 各chで tempIn を使うのでサイズ確保（中身はchごとに埋める）
-            tempIn.resize ((size_t) maxInNeeded);
+            const int maxInNeeded = std::min ((int) tempIn.size(),
+                                              (int) std::ceil (wantOut * ratio) + minInGuard);
 
             int usedInCommon = -1;
 
             for (int c = 0; c < ch; ++c)
             {
-                // fifoRead から maxInNeeded サンプルを連続抽出（リング→直列化）
+                // fifoRead から maxInNeeded サンプルを連続抽出（リング→直列化）。
+                // ガード領域は有効入力の末尾値で埋め、未投入のFIFO領域を読まない。
                 int r = fifoRead;
+                float tail = 0.0f;
                 for (int i = 0; i < maxInNeeded; ++i)
                 {
-                    tempIn[(size_t) i] = fifo.getSample (c, r);
-                    r = (r + 1) % fifoSize;
+                    if (i < available)
+                    {
+                        tail = fifo.getSample (c, r);
+                        tempIn[(size_t) i] = tail;
+                        r = (r + 1) % fifoSize;
+                    }
+                    else
+                    {
+                        tempIn[(size_t) i] = tail;
+                    }
                 }
 
                 float* dst = out.getWritePointer (c);
@@ -154,4 +162,3 @@ private:
     std::vector<juce::CatmullRomInterpolator> interpolators;
     std::vector<float> tempIn;
 };
-
