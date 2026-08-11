@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dsp:
+    name: DSP tests
+    uses: EsionHsrahLatigid/juce-ci/.github/workflows/juce-cmake.yml@v1
+    with:
+      runs-on: ubuntu-24.04
+      dependency-cache-key: adattypei-dsp-v1
+      cache-fetchcontent: false
+      cmake-options: >-
+        -DADATTYPEI_BUILD_PLUGIN=OFF
+        -DADATTYPEI_BUILD_TESTS=ON
+      build-targets: AdatTypeIDspTests
+
+  plugin:
+    name: Plugin build and smoke tests
+    uses: EsionHsrahLatigid/juce-ci/.github/workflows/juce-cmake.yml@v1
+    with:
+      runs-on: macos-14
+      dependency-cache-key: juce-8.0.15
+      cmake-options: >-
+        -DADATTYPEI_BUILD_PLUGIN=ON
+        -DADATTYPEI_BUILD_TESTS=ON
+      build-targets: >-
+        AdatTypeI_Artifacts
+        AdatTypeIDspTests
+        AdatTypeIPluginSmokeTests
+      artifact-name: AdatTypeI-macOS
+      artifact-path: |
+        artifacts/Release/VST3/
+        artifacts/Release/AU/
+        artifacts/Release/Standalone/
