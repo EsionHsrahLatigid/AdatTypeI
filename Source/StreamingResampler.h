@@ -132,8 +132,9 @@ public:
                 break;
             }
 
-            fifoRead = (fifoRead + usedInCommon) % fifoSize;
-            available -= usedInCommon;
+            const int consumed = std::min (usedInCommon, available);
+            fifoRead = (fifoRead + consumed) % fifoSize;
+            available -= consumed;
 
             produced = outSamples; // wantOut全部作った前提
         }
