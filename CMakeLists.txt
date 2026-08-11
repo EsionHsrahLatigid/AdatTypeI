@@ -25,6 +25,8 @@ if(ADATTYPEI_BUILD_TESTS)
 endif()
 
 if(ADATTYPEI_BUILD_PLUGIN)
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
     if(ADATTYPEI_JUCE_PATH)
         add_subdirectory("${ADATTYPEI_JUCE_PATH}" "${CMAKE_CURRENT_BINARY_DIR}/JUCE")
     else()
@@ -91,6 +93,9 @@ if(ADATTYPEI_BUILD_PLUGIN)
         COMMAND ${CMAKE_COMMAND} -E remove_directory "${adattypei_staged_products}/Standalone"
         COMMAND ${CMAKE_COMMAND} -E copy_directory
                 "${adattypei_juce_products}/VST3" "${adattypei_staged_products}/VST3"
+        COMMAND ${Python3_EXECUTABLE}
+                "${CMAKE_CURRENT_SOURCE_DIR}/cmake/NormalizeVst3ModuleInfo.py"
+                "${adattypei_staged_products}/VST3/AdatTypeI.vst3/Contents/Resources/moduleinfo.json"
         COMMAND ${CMAKE_COMMAND} -E copy_directory
                 "${adattypei_juce_products}/Standalone" "${adattypei_staged_products}/Standalone")
 
@@ -123,6 +128,14 @@ if(ADATTYPEI_BUILD_PLUGIN)
             Source
             "${CMAKE_CURRENT_BINARY_DIR}/AdatTypeI_artefacts/JuceLibraryCode")
         target_link_libraries(AdatTypeIPluginSmokeTests PRIVATE AdatTypeI juce::juce_audio_utils)
+        add_dependencies(AdatTypeIPluginSmokeTests AdatTypeI_Artifacts)
         add_test(NAME AdatTypeIPluginSmokeTests COMMAND AdatTypeIPluginSmokeTests)
+        add_test(
+            NAME AdatTypeIArtifactChecks
+            COMMAND ${CMAKE_COMMAND}
+                    -DADATTYPEI_STAGED_DIR=${ADATTYPEI_ARTIFACT_DIR}/$<CONFIG>
+                    -DADATTYPEI_EXPECT_AU=$<BOOL:${APPLE}>
+                    -DPython3_EXECUTABLE=${Python3_EXECUTABLE}
+                    -P ${CMAKE_CURRENT_SOURCE_DIR}/Tests/VerifyArtifacts.cmake)
     endif()
 endif()
