@@ -47,7 +47,7 @@ int main()
     processor.processBlock (smallBlock, midi);
     requireFinite (smallBlock);
 
-    juce::AudioBuffer<float> largeBlock (2, 1024);
+    juce::AudioBuffer<float> largeBlock (2, 2048);
     largeBlock.clear();
     for (int channel = 0; channel < largeBlock.getNumChannels(); ++channel)
         for (int sample = 0; sample < largeBlock.getNumSamples(); ++sample)

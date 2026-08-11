@@ -132,45 +132,45 @@ void AdatTypeI_VST3AudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     if (hostN <= 0)
         return;
 
-    const int processHostN = std::min (hostN, maxHostBlockSamples);
-
-    // 1) 入力を8chに整形（不足ch=0埋め）
-    inPadded8.clear (0, processHostN);
-    for (int c = 0; c < std::min (hostCh, 8); ++c)
-        inPadded8.copyFrom (c, 0, buffer, c, 0, processHostN);
-
-    // 2) host -> 48k
-    to48k.pushInput (inPadded8, processHostN);
-
-    const double exact48 = (double) processHostN * (48000.0 / hostSR) + to48Remainder;
-    const int n48 = (int) std::floor (exact48);
-    to48Remainder = exact48 - (double) n48;
-
-    // 念のため最低1、最大は確保バッファ内に丸める
-    const int n48Safe = std::clamp (n48, 1, work48.getNumSamples());
-
-    work48.clear (0, n48Safe);
-    out48.clear (0, n48Safe);
-
-    to48k.popOutput (work48, n48Safe);
-
-    // 3) 48k領域でADAT loop + noise
-    processAdat48k (work48, out48, n48Safe);
-
-    // 4) 48k -> host
-    from48k.pushInput (out48, n48Safe);
-
-    outHost8.clear (0, processHostN);
-    from48k.popOutput (outHost8, processHostN);
-
-    // 5) 出力（ホストch数分のみ）
-    for (int c = 0; c < hostCh; ++c)
+    for (int hostOffset = 0; hostOffset < hostN; hostOffset += maxHostBlockSamples)
     {
-        if (c < 8) buffer.copyFrom (c, 0, outHost8, c, 0, processHostN);
-        else       buffer.clear (c, 0, processHostN);
+        const int processHostN = std::min (maxHostBlockSamples, hostN - hostOffset);
 
-        if (processHostN < hostN)
-            buffer.clear (c, processHostN, hostN - processHostN);
+        // 1) 入力を8chに整形（不足ch=0埋め）
+        inPadded8.clear (0, processHostN);
+        for (int c = 0; c < std::min (hostCh, 8); ++c)
+            inPadded8.copyFrom (c, 0, buffer, c, hostOffset, processHostN);
+
+        // 2) host -> 48k
+        to48k.pushInput (inPadded8, processHostN);
+
+        const double exact48 = (double) processHostN * (48000.0 / hostSR) + to48Remainder;
+        const int n48 = (int) std::floor (exact48);
+        to48Remainder = exact48 - (double) n48;
+
+        // 念のため最低1、最大は確保バッファ内に丸める
+        const int n48Safe = std::clamp (n48, 1, work48.getNumSamples());
+
+        work48.clear (0, n48Safe);
+        out48.clear (0, n48Safe);
+
+        to48k.popOutput (work48, n48Safe);
+
+        // 3) 48k領域でADAT loop + noise
+        processAdat48k (work48, out48, n48Safe);
+
+        // 4) 48k -> host
+        from48k.pushInput (out48, n48Safe);
+
+        outHost8.clear (0, processHostN);
+        from48k.popOutput (outHost8, processHostN);
+
+        // 5) 出力（ホストch数分のみ）
+        for (int c = 0; c < hostCh; ++c)
+        {
+            if (c < 8) buffer.copyFrom (c, hostOffset, outHost8, c, 0, processHostN);
+            else       buffer.clear (c, hostOffset, processHostN);
+        }
     }
 }
 
