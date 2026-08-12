@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "PluginEditor.h"
 
 namespace ParamIDs
 {
@@ -89,7 +90,7 @@ bool AdatTypeI_VST3AudioProcessor::isBusesLayoutSupported (const BusesLayout& la
 
 juce::AudioProcessorEditor* AdatTypeI_VST3AudioProcessor::createEditor()
 {
-    return new juce::GenericAudioProcessorEditor (*this);
+    return new AdatTypeIAudioProcessorEditor (*this);
 }
 
 void AdatTypeI_VST3AudioProcessor::processAdat48k (const juce::AudioBuffer<float>& in48,
