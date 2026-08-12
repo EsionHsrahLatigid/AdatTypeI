@@ -43,19 +43,21 @@ AdatTypeI_VST3AudioProcessor::createParameterLayout()
 void AdatTypeI_VST3AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     const int maxCh = 8;
+    const double effectiveSampleRate = sampleRate > 0.0 ? sampleRate : 48000.0;
+    preparedSampleRate = effectiveSampleRate;
     maxHostBlockSamples = std::max (1, samplesPerBlock);
 
     inPadded8.setSize (maxCh, maxHostBlockSamples, false, true, true);
     inPadded8.clear();
 
     // host -> 48k (ceil + margin)
-    const int max48 = (int) std::ceil ((double)maxHostBlockSamples * (48000.0 / sampleRate)) + 64;
+    const int max48 = (int) std::ceil ((double)maxHostBlockSamples * (48000.0 / effectiveSampleRate)) + 64;
     work48.setSize (maxCh, max48, false, true, true);
     out48.setSize  (maxCh, max48, false, true, true);
     outHost8.setSize (maxCh, maxHostBlockSamples, false, true, true);
 
-    to48k.prepare   (maxCh, sampleRate, 48000.0, maxHostBlockSamples);
-    from48k.prepare (maxCh, 48000.0, sampleRate, max48);
+    to48k.prepare   (maxCh, effectiveSampleRate, 48000.0, maxHostBlockSamples);
+    from48k.prepare (maxCh, 48000.0, effectiveSampleRate, max48);
 
     to48k.reset();
     from48k.reset();
@@ -128,7 +130,7 @@ void AdatTypeI_VST3AudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
 
     const int hostCh = buffer.getNumChannels();
     const int hostN  = buffer.getNumSamples();
-    const double hostSR = getSampleRate();
+    const double hostSR = preparedSampleRate;
 
     if (hostN <= 0)
         return;

@@ -57,6 +57,7 @@ private:
 
     AdatNoise noise;
     double to48Remainder;
+    double preparedSampleRate = 48000.0;
     int maxHostBlockSamples = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AdatTypeI_VST3AudioProcessor)

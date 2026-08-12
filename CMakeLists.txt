@@ -126,10 +126,12 @@ if(ADATTYPEI_BUILD_PLUGIN)
         list(APPEND adattypei_artifact_commands
             COMMAND ${CMAKE_COMMAND} -E rm -rf "${adattypei_staged_products}/vst3/adattypei_vst3_plugin.vst3"
             COMMAND ${CMAKE_COMMAND} -E copy_directory "${adattypei_juce_products}/VST3/AdatTypeI.vst3" "${adattypei_staged_products}/vst3/adattypei_vst3_plugin.vst3"
+            COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/NormalizeVst3ModuleInfo.py" "${adattypei_staged_products}/vst3/adattypei_vst3_plugin.vst3/Contents/Resources/moduleinfo.json"
             COMMAND ${CMAKE_COMMAND} -E copy "${adattypei_juce_products}/Standalone/AdatTypeI.exe" "${adattypei_staged_products}/standalone/adattypei_standalone_plugin.exe")
     else()
         list(APPEND adattypei_artifact_commands
             COMMAND ${CMAKE_COMMAND} -E copy_directory "${adattypei_juce_products}/VST3/AdatTypeI.vst3" "${adattypei_staged_products}/vst3/adattypei_vst3_plugin.vst3"
+            COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/NormalizeVst3ModuleInfo.py" "${adattypei_staged_products}/vst3/adattypei_vst3_plugin.vst3/Contents/Resources/moduleinfo.json"
             COMMAND ${CMAKE_COMMAND} -E copy "${adattypei_juce_products}/Standalone/AdatTypeI" "${adattypei_staged_products}/standalone/adattypei_standalone_plugin")
     endif()
 
