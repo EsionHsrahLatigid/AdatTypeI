@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   release:
-    uses: EsionHsrahLatigid/juce-ci/.github/workflows/plugin-release.yml@6dc9b7c28e262fad8c854a7f77120672b28dc4c7
+    uses: EsionHsrahLatigid/juce-ci/.github/workflows/plugin-release.yml@c0266acba775b9d0950ed5af6bdf0e6e1218ff03
     permissions:
       actions: read
       contents: write
